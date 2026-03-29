@@ -115,6 +115,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div>
       <h1>Skaner Prób</h1>
       <p>Alstom · MT / UT · OCR</p>
+      <p style="font-size:11px;color:#ef4444;margin-top:4px;font-family:var(--mono);letter-spacing:1px;">Created by Borcios</p>
     </div>
   </div>
 
@@ -352,7 +353,7 @@ async function downloadFromServer(type, proby, spawacz, projekt) {
 
 
 // ── EMAIL ─────────────────────────────────────────────
-function sendEmail() {
+async function sendEmail() {
   const to = document.getElementById('emailTo').value.trim();
   if (!to) { showError('Wpisz adres email odbiorcy!'); return; }
   if (!currentResult) return;
@@ -362,25 +363,47 @@ function sendEmail() {
   const spawacz = currentResult.spawacz || '';
   const projekt = currentResult.projekt || '';
 
-  let subject = encodeURIComponent(`NDT Wyniki — ${projekt} — ${spawacz}`);
+  const subject = `NDT Wyniki — ${projekt} — ${spawacz}`;
+  let bodyText = `Dzień dobry,\n\nW załączeniu przesyłam wyniki badań nieniszczących.\n\n`;
+  bodyText += `Spawacz: ${spawacz}\nProjekt: ${projekt}\n\n`;
+  if (mt.length) bodyText += `Próby MT (${mt.length}): ${mt.join(', ')}\n`;
+  if (ut.length) bodyText += `Próby UT (${ut.length}): ${ut.join(', ')}\n`;
+  bodyText += `\nPozdrawiam`;
 
-  let body = `Dzień dobry,
+  // Generuj pliki jeśli jeszcze nie ma
+  const btn = document.querySelector('.email-btn');
+  btn.textContent = '⏳ Generuję...';
+  btn.disabled = true;
 
-W załączeniu przesyłam wyniki badań nieniszczących.
+  const filesToAttach = [];
+  for (const [type, proby] of [['MT', mt], ['UT', ut]]) {
+    if (!proby.length) continue;
+    if (!downloadedFiles[type]) {
+      await downloadFromServer(type, proby, spawacz, projekt);
+    }
+    if (downloadedFiles[type]) {
+      const { blob, fname } = downloadedFiles[type];
+      filesToAttach.push(new File([blob], fname, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }));
+    }
+  }
 
-`;
-  body += `Spawacz: ${spawacz}
-Projekt: ${projekt}
+  btn.textContent = 'Wyślij ✉';
+  btn.disabled = false;
 
-`;
-  if (mt.length) body += `Próby MT (${mt.length}): ${mt.join(', ')}
-`;
-  if (ut.length) body += `Próby UT (${ut.length}): ${ut.join(', ')}
-`;
-  body += `
-Pozdrawiam`;
+  // Web Share API z plikami (iPhone/Android)
+  if (filesToAttach.length && navigator.canShare && navigator.canShare({ files: filesToAttach })) {
+    try {
+      await navigator.share({ title: subject, text: bodyText, files: filesToAttach });
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
 
-  window.location.href = `mailto:${to}?subject=${subject}&body=${encodeURIComponent(body)}`;
+  // Fallback mailto (desktop)
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
 }
 
 // ── HELPERS ───────────────────────────────────────────
