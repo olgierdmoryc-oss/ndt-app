@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Alstom NDT — Skaner Prób</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14; --surface:#161921; --surface2:#1e2230;
+  --border:#2a2f3e; --accent:#00c8ff; --accent2:#ff6b35;
+  --mt:#ff6b35; --ut:#00c8ff; --text:#e8eaf0; --muted:#6b7280;
+  --ok:#22c55e; --err:#ef4444;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.app{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:20px 16px 60px}
+
+/* HEADER */
+.header{display:flex;align-items:center;gap:12px;padding:20px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.logo{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#0066aa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;flex-shrink:0}
+.header h1{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
+.header p{font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+
+/* API KEY */
+.api-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:20px}
+.api-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.api-row{display:flex;gap:8px}
+.api-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
+.api-input:focus{border-color:var(--accent)}
+.api-toggle{background:transparent;border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--muted);cursor:pointer;font-size:14px}
+.api-hint{font-size:10px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
+.api-hint a{color:var(--accent);text-decoration:none}
+
+/* SECTION LABEL */
+.slabel{font-family:var(--mono);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
+.upload-zone:hover,.upload-zone.over{border-color:var(--accent);background:rgba(0,200,255,.05)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone .ico{font-size:38px;display:block;margin-bottom:12px}
+.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.upload-zone p{font-size:12px;color:var(--muted)}
+.preview{margin-top:14px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#000}
+.preview img{width:100%;max-height:280px;object-fit:contain;display:block}
+.preview-lbl{padding:7px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface);display:flex;justify-content:space-between}
+
+/* SCAN BTN */
+.scan-btn{display:none;width:100%;margin-top:14px;padding:16px;background:linear-gradient(135deg,var(--accent),#0088cc);border:none;border-radius:10px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.scan-btn:hover{opacity:.9}
+.scan-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* PROGRESS */
+.progress{display:none;margin-top:12px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden}
+.pfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;width:0%;transition:width .3s}
+.status-msg{display:none;margin-top:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* ERROR */
+.error-box{display:none;margin-top:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;font-size:12px;color:#fca5a5;font-family:var(--mono)}
+
+/* RESULTS */
+#results{display:none;margin-top:28px}
+.divider{height:1px;background:var(--border);margin:20px 0}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.icard .lbl{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.icard .val{font-size:13px;font-weight:600;word-break:break-all}
+.pcols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.pcol{background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.phdr{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.phdr.mt{background:rgba(255,107,53,.1)}
+.phdr.ut{background:rgba(0,200,255,.1)}
+.badge{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.badge.mt{background:var(--mt);color:#fff}
+.badge.ut{background:var(--ut);color:#000}
+.pcnt{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.plist{padding:10px;min-height:60px}
+.pitem{font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:4px;border:1px solid transparent}
+.pitem.mt{background:rgba(255,107,53,.08);border-color:rgba(255,107,53,.2);color:#ffb08a}
+.pitem.ut{background:rgba(0,200,255,.08);border-color:rgba(0,200,255,.2);color:#7de8ff}
+.pempty{font-size:11px;color:var(--muted);padding:8px;font-style:italic}
+.erow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ebtn{padding:14px 10px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.ebtn .ico{font-size:20px}
+.ebtn.mt{background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.4);color:var(--mt)}
+.ebtn.ut{background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);color:var(--ut)}
+.ebtn:hover{filter:brightness(1.2);transform:translateY(-2px)}
+.ebtn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.ebtn-all{width:100%;padding:14px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--ok);text-transform:uppercase;transition:all .2s}
+.ebtn-all:disabled{opacity:.3;cursor:not-allowed}
+.ebtn-all:hover:not(:disabled){filter:brightness(1.2)}
+.reset-btn{width:100%;margin-top:20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase}
+.reset-btn:hover{border-color:var(--text);color:var(--text)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--surface2);border:1px solid var(--ok);border-radius:8px;padding:10px 22px;font-family:var(--mono);font-size:12px;color:var(--ok);transition:transform .3s;z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">NDT</div>
+    <div>
+      <h1>Skaner Prób</h1>
+      <p>Alstom · MT / UT · OCR</p>
+    </div>
+  </div>
+
+  <!-- klucz API wbudowany w server.py -->
+  <input type="hidden" id="apiKey" value="">
+
+  <!-- UPLOAD -->
+  <div class="slabel">01 — Wczytaj formularz</div>
+  <div class="upload-zone" id="zone"
+    ondrop="onDrop(event)" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')">
+    <input type="file" accept="image/*" id="fileInput" onchange="onFile(this.files[0])">
+    <span class="ico">📷</span>
+    <h3>Wybierz zdjęcie</h3>
+    <p>JPG, PNG, HEIC — formularz Alstom</p>
+  </div>
+
+  <div id="previewWrap" style="display:none">
+    <div class="preview">
+      <img id="previewImg" alt="Podgląd">
+    </div>
+    <div class="preview-lbl">
+      <span id="previewName"></span>
+      <span id="previewSize"></span>
+    </div>
+  </div>
+
+  <button class="scan-btn" id="scanBtn" onclick="scan()">⚡ Analizuj formularz</button>
+  <div class="progress" id="progressBar"><div class="pfill" id="pfill"></div></div>
+  <div class="status-msg" id="statusMsg">Wysyłanie do Claude AI…</div>
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="divider"></div>
+    <div class="slabel">02 — Wyniki odczytu</div>
+    <div class="info-grid">
+      <div class="icard"><div class="lbl">Spawacz</div><div class="val" id="rSpawacz">—</div></div>
+      <div class="icard"><div class="lbl">Projekt</div><div class="val" id="rProjekt">—</div></div>
+    </div>
+    <div class="pcols">
+      <div class="pcol">
+        <div class="phdr mt"><span class="badge mt">MT</span><span class="pcnt" id="mtCnt">0 prób</span></div>
+        <div class="plist" id="mtList"><div class="pempty">brak</div></div>
+      </div>
+      <div class="pcol">
+        <div class="phdr ut"><span class="badge ut">UT</span><span class="pcnt" id="utCnt">0 prób</span></div>
+        <div class="plist" id="utList"><div class="pempty">brak</div></div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="slabel">03 — Eksportuj do Excel</div>
+    <div class="erow">
+      <button class="ebtn mt" id="btnMT" disabled onclick="exportXLSX('MT')"><span class="ico">🔥</span>MT_wzor.xlsx</button>
+      <button class="ebtn ut" id="btnUT" disabled onclick="exportXLSX('UT')"><span class="ico">🔊</span>UT_wzor.xlsx</button>
+    </div>
+    <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('BOTH')">⬇ Pobierz oba pliki</button>
+    <button class="reset-btn" onclick="reset()">↩ Skanuj kolejny formularz</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+let imgB64 = null, currentResult = null;
+
+// ── API KEY ──────────────────────────────────────────
+function toggleKey() {
+  const el = document.getElementById('apiKey');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+// ── FILE HANDLING ────────────────────────────────────
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('zone').classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) onFile(f);
+}
+
+function onFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      const MAX = 1800;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let q = 0.85, comp;
+      do { comp = canvas.toDataURL('image/jpeg', q); q -= 0.1; }
+      while (comp.length * 0.75 > 4.2 * 1024 * 1024 && q > 0.2);
+      imgB64 = comp.split(',')[1];
+      const kb = Math.round(imgB64.length * 0.75 / 1024);
+      document.getElementById('previewImg').src = comp;
+      document.getElementById('previewName').textContent = file.name;
+      document.getElementById('previewSize').textContent = kb + ' KB (po kompresji)';
+      document.getElementById('previewWrap').style.display = 'block';
+      document.getElementById('scanBtn').style.display = 'block';
+      document.getElementById('errorBox').style.display = 'none';
+      document.getElementById('results').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── SCAN ─────────────────────────────────────────────
+async function scan() {
+  const apiKey = '';
+  if (!imgB64) { showError('Najpierw wczytaj zdjęcie!'); return; }
+
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true; btn.textContent = '⏳ Analizuję…';
+  document.getElementById('progressBar').style.display = 'block';
+  document.getElementById('statusMsg').style.display = 'block';
+  document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+
+  let prog = 10;
+  const iv = setInterval(() => { prog = Math.min(prog + 6, 85); document.getElementById('pfill').style.width = prog + '%'; }, 400);
+
+  try {
+    const resp = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, image_base64: imgB64 })
+    });
+    clearInterval(iv);
+    document.getElementById('pfill').style.width = '100%';
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    currentResult = data.result;
+    showResults(data.result);
+  } catch(e) {
+    clearInterval(iv);
+    showError(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⚡ Analizuj ponownie';
+    document.getElementById('progressBar').style.display = 'none';
+    document.getElementById('statusMsg').style.display = 'none';
+  }
+}
+
+// ── RESULTS ──────────────────────────────────────────
+function showResults(d) {
+  document.getElementById('rSpawacz').textContent = d.spawacz || '?';
+  document.getElementById('rProjekt').textContent = d.projekt || '?';
+  const mt = d.mt_proby || [], ut = d.ut_proby || [];
+
+  const fill = (listId, cntId, items, cls) => {
+    const el = document.getElementById(listId);
+    el.innerHTML = items.length
+      ? items.map(p => `<div class="pitem ${cls}">${p}</div>`).join('')
+      : `<div class="pempty">brak prób ${cls.toUpperCase()}</div>`;
+    document.getElementById(cntId).textContent = items.length + ' prób';
+  };
+  fill('mtList', 'mtCnt', mt, 'mt');
+  fill('utList', 'utCnt', ut, 'ut');
+
+  document.getElementById('btnMT').disabled = mt.length === 0;
+  document.getElementById('btnUT').disabled = ut.length === 0;
+  document.getElementById('btnBoth').disabled = mt.length === 0 && ut.length === 0;
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('results').scrollIntoView({behavior:'smooth'});
+}
+
+// ── EXCEL EXPORT — przez serwer Python (zachowuje str1/str2) ──
+async function exportXLSX(type) {
+  if (!currentResult) return;
+  const types = type === 'BOTH' ? ['MT','UT'] : [type];
+  for (const t of types) {
+    const proby = t === 'MT' ? (currentResult.mt_proby||[]) : (currentResult.ut_proby||[]);
+    if (!proby.length) continue;
+    await downloadFromServer(t, proby, currentResult.spawacz, currentResult.projekt);
+  }
+}
+
+async function downloadFromServer(type, proby, spawacz, projekt) {
+  try {
+    const resp = await fetch('/api/export', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({type, proby, spawacz, projekt})
+    });
+    if (!resp.ok) {
+      const err = await resp.json();
+      showError(err.error || 'Błąd eksportu');
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${type}__wzor_wypelniony.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`✓ Pobrano ${type}__wzor_wypelniony.xlsx`);
+  } catch(e) {
+    showError('Błąd eksportu: ' + e.message);
+  }
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  b.textContent = '⚠ ' + msg;
+  b.style.display = 'block';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function reset() {
+  imgB64 = null; currentResult = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('scanBtn').style.display = 'none';
+  document.getElementById('scanBtn').textContent = '⚡ Analizuj formularz';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('errorBox').style.display = 'none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
