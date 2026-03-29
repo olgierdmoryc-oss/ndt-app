@@ -94,6 +94,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .ebtn-all:hover:not(:disabled){filter:brightness(1.2)}
 .reset-btn{width:100%;margin-top:20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase}
 .reset-btn:hover{border-color:var(--text);color:var(--text)}
+.email-section{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.email-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.email-row{display:flex;gap:8px}
+.email-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
+.email-input:focus{border-color:var(--accent)}
+.email-btn{padding:9px 14px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);border-radius:7px;color:var(--ut);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.email-btn:hover{filter:brightness(1.2)}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--surface2);border:1px solid var(--ok);border-radius:8px;padding:10px 22px;font-family:var(--mono);font-size:12px;color:var(--ok);transition:transform .3s;z-index:999;white-space:nowrap}
@@ -160,10 +167,18 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="divider"></div>
     <div class="slabel">03 — Eksportuj do Excel</div>
     <div class="erow">
-      <button class="ebtn mt" id="btnMT" disabled onclick="exportXLSX('MT')"><span class="ico">🔥</span>MT_wzor.xlsx</button>
-      <button class="ebtn ut" id="btnUT" disabled onclick="exportXLSX('UT')"><span class="ico">🔊</span>UT_wzor.xlsx</button>
+      <button class="ebtn mt" id="btnMT" disabled onclick="exportXLSX('MT')"><span class="ico">🔥</span>Pobierz MT</button>
+      <button class="ebtn ut" id="btnUT" disabled onclick="exportXLSX('UT')"><span class="ico">🔊</span>Pobierz UT</button>
     </div>
     <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('BOTH')">⬇ Pobierz oba pliki</button>
+
+    <div class="email-section" id="emailSection" style="display:none">
+      <div class="lbl">📧 Wyślij email z plikami</div>
+      <div class="email-row">
+        <input class="email-input" id="emailTo" type="email" placeholder="odbiorca@firma.pl">
+        <button class="email-btn" onclick="sendEmail()">Wyślij ✉</button>
+      </div>
+    </div>
     <button class="reset-btn" onclick="reset()">↩ Skanuj kolejny formularz</button>
   </div>
 </div>
@@ -279,6 +294,7 @@ function showResults(d) {
   document.getElementById('btnBoth').disabled = mt.length === 0 && ut.length === 0;
   document.getElementById('results').style.display = 'block';
   document.getElementById('results').scrollIntoView({behavior:'smooth'});
+  document.getElementById('emailSection').style.display = 'block';
 }
 
 // ── EXCEL EXPORT — przez serwer Python (zachowuje str1/str2) ──
@@ -317,6 +333,39 @@ async function downloadFromServer(type, proby, spawacz, projekt) {
   }
 }
 
+
+// ── EMAIL ─────────────────────────────────────────────
+function sendEmail() {
+  const to = document.getElementById('emailTo').value.trim();
+  if (!to) { showError('Wpisz adres email odbiorcy!'); return; }
+  if (!currentResult) return;
+
+  const mt = currentResult.mt_proby || [];
+  const ut = currentResult.ut_proby || [];
+  const spawacz = currentResult.spawacz || '';
+  const projekt = currentResult.projekt || '';
+
+  let subject = encodeURIComponent(`NDT Wyniki — ${projekt} — ${spawacz}`);
+
+  let body = `Dzień dobry,
+
+W załączeniu przesyłam wyniki badań nieniszczących.
+
+`;
+  body += `Spawacz: ${spawacz}
+Projekt: ${projekt}
+
+`;
+  if (mt.length) body += `Próby MT (${mt.length}): ${mt.join(', ')}
+`;
+  if (ut.length) body += `Próby UT (${ut.length}): ${ut.join(', ')}
+`;
+  body += `
+Pozdrawiam`;
+
+  window.location.href = `mailto:${to}?subject=${subject}&body=${encodeURIComponent(body)}`;
+}
+
 // ── HELPERS ───────────────────────────────────────────
 function showError(msg) {
   const b = document.getElementById('errorBox');
@@ -338,6 +387,7 @@ function reset() {
   document.getElementById('scanBtn').textContent = '⚡ Analizuj formularz';
   document.getElementById('results').style.display = 'none';
   document.getElementById('errorBox').style.display = 'none';
+  document.getElementById('emailSection').style.display = 'none';
   window.scrollTo({top:0,behavior:'smooth'});
 }
 </script>

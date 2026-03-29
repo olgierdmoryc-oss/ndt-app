@@ -115,7 +115,7 @@ def export():
 
     ws["A1"] = date.today()
     ws["A1"].number_format = "DD.MM.YYYY"
-    ws["A2"] = " ".join(proby)
+    ws["A2"] = ", ".join(proby)
     ws["A3"] = spawacz
     ws["A4"] = projekt
 
@@ -126,7 +126,10 @@ def export():
     wb.save(buf)
     buf.seek(0)
 
-    fname = f"{t}__wzor_wypelniony.xlsx"
+    # Nazwa pliku: TYP_próba1_próba2_..._spawacz.xlsx
+    spawacz_safe = spawacz.replace(" ", "_").upper()
+    proby_str = "_".join(proby)
+    fname = f"{t}_{proby_str}_{spawacz_safe}.xlsx"
     return send_file(
         buf,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
