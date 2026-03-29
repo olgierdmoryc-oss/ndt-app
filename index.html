@@ -308,6 +308,9 @@ async function exportXLSX(type) {
   }
 }
 
+// Przechowuje pobrane pliki do wysyłki emailem
+const downloadedFiles = {};
+
 async function downloadFromServer(type, proby, spawacz, projekt) {
   try {
     const resp = await fetch('/api/export', {
@@ -318,18 +321,32 @@ async function downloadFromServer(type, proby, spawacz, projekt) {
     if (!resp.ok) {
       const err = await resp.json();
       showError(err.error || 'Błąd eksportu');
-      return;
+      return null;
     }
     const blob = await resp.blob();
+
+    // Buduj nazwę pliku tak samo jak serwer
+    const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
+    const probyStr = proby.join('_');
+    const fname = `${type}_${probyStr}_${spawaczSafe}.xlsx`;
+
+    // Zapisz blob do późniejszego emaila
+    downloadedFiles[type] = { blob, fname };
+
+    // Pobierz plik
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${type}__wzor_wypelniony.xlsx`;
+    a.download = fname;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    showToast(`✓ Pobrano ${type}__wzor_wypelniony.xlsx`);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`✓ Pobrano ${fname}`);
+    return { blob, fname };
   } catch(e) {
     showError('Błąd eksportu: ' + e.message);
+    return null;
   }
 }
 
@@ -388,6 +405,7 @@ function reset() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('errorBox').style.display = 'none';
   document.getElementById('emailSection').style.display = 'none';
+  Object.keys(downloadedFiles).forEach(k => delete downloadedFiles[k]);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 </script>
