@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 """
-Alstom NDT — Skaner Prób v3.1
+Alstom NDT — Skaner Prób v3.0
 Hosting: Render.com
-Obrazki w szablonach są w 100% zachowane (ZIP surgery).
 """
 
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from io import BytesIO
 from datetime import date
-import os, json, zipfile, io, re
-import urllib.request, urllib.error
+import os
+import json
+import urllib.request
+import urllib.error
+import openpyxl
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
 API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Wczytaj szablony przy starcie (surowe bajty)
+# Wczytaj szablony przy starcie
 TEMPLATES = {}
 for t in ["MT", "UT"]:
     path = os.path.join(BASE_DIR, f"{t}__wzor.xlsx")
@@ -28,169 +30,6 @@ for t in ["MT", "UT"]:
         print(f"⚠ Brak {t}__wzor.xlsx!")
 
 
-# ── Shared strings helper ────────────────────────────────────────────────────
-def _parse_shared_strings(ss_bytes):
-    """Parsuje sharedStrings.xml → lista stringów."""
-    strings = []
-    try:
-        import xml.etree.ElementTree as ET
-        root = ET.fromstring(ss_bytes)
-        ns = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-        for si in root.findall("x:si", ns):
-            parts = []
-            # <t> bezpośrednio w <si>
-            t = si.find("x:t", ns)
-            if t is not None and t.text:
-                parts.append(t.text)
-            # <r><t> runs
-            for r in si.findall("x:r", ns):
-                rt = r.find("x:t", ns)
-                if rt is not None and rt.text:
-                    parts.append(rt.text)
-            strings.append("".join(parts))
-    except Exception as e:
-        print(f"Błąd parsowania sharedStrings: {e}")
-    return strings
-
-
-def _build_shared_strings_xml(strings):
-    """Buduje sharedStrings.xml z listy stringów."""
-    lines = [
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n',
-        f'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
-        f' count="{len(strings)}" uniqueCount="{len(strings)}">'
-    ]
-    for s in strings:
-        escaped = (s
-                   .replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace('"', "&quot;"))
-        lines.append(f'<si><t xml:space="preserve">{escaped}</t></si>')
-    lines.append("</sst>")
-    return "".join(lines).encode("utf-8")
-
-
-# ── ZIP Surgery: aktualizuj tylko sheet1.xml (DANE) ─────────────────────────
-def patch_xlsx(template_bytes, today_date, proby, spawacz, projekt):
-    """
-    Wstrzykuje dane do arkusza DANE bez naruszania obrazków.
-    Struktura DANE:
-      A1 = data (liczba Excel)      → str1!I12
-      A2 = numer próby (tekst)      → str1!S17  (wszystkie próby jako string)
-      A3 = spawacz (tekst)          → str1!S21
-      B1..B20 = próby (tekst)       → str2!B29..B48
-    """
-    src_zip = zipfile.ZipFile(io.BytesIO(template_bytes))
-    
-    # Wczytaj shared strings
-    ss_bytes = src_zip.read("xl/sharedStrings.xml")
-    strings = _parse_shared_strings(ss_bytes)
-    
-    # Przygotuj wartości
-    excel_date = (today_date - date(1899, 12, 30)).days  # Excel serial date
-    proby_str  = ", ".join(proby)
-    spawacz_str = spawacz or ""
-    
-    # Znajdź lub dodaj stringi do shared strings
-    def get_or_add(val):
-        try:
-            idx = strings.index(val)
-        except ValueError:
-            idx = len(strings)
-            strings.append(val)
-        return idx
-    
-    idx_proby   = get_or_add(proby_str)
-    idx_spawacz = get_or_add(spawacz_str)
-    idx_proby_list = [get_or_add(p) for p in proby]
-    
-    # Buduj nowy sheet1.xml (arkusz DANE)
-    # Styl 105 = data, 106 = tekst (zachowujemy oryginalne style)
-    rows_xml = []
-    def b_cell(row, col_val_idx):
-        if col_val_idx is None:
-            return f'<c r="B{row}" s="106"/>'
-        return f'<c r="B{row}" s="106" t="s"><v>{col_val_idx}</v></c>'
-
-    b1 = idx_proby_list[0] if len(proby) > 0 else get_or_add("")
-    rows_xml.append(
-        f'<row r="1" spans="1:2">'
-        f'<c r="A1" s="105"><v>{excel_date}</v></c>'
-        + b_cell(1, b1) +
-        f'</row>'
-    )
-    rows_xml.append(
-        f'<row r="2" spans="1:2">'
-        f'<c r="A2" s="106" t="s"><v>{idx_proby}</v></c>'
-        + b_cell(2, idx_proby_list[1] if len(proby) > 1 else None) +
-        f'</row>'
-    )
-    rows_xml.append(
-        f'<row r="3" spans="1:2">'
-        f'<c r="A3" s="106" t="s"><v>{idx_spawacz}</v></c>'
-        + b_cell(3, idx_proby_list[2] if len(proby) > 2 else None) +
-        f'</row>'
-    )
-    
-    for i in range(3, 20):
-        row_num = i + 1
-        if i < len(proby):
-            rows_xml.append(
-                f'<row r="{row_num}" spans="2:2"><c r="B{row_num}" s="106" t="s">'
-                f'<v>{idx_proby_list[i]}</v></c></row>'
-            )
-        else:
-            rows_xml.append(f'<row r="{row_num}" spans="2:2"><c r="B{row_num}" s="106"/></row>')
-    
-    # Pozostałe wiersze 21-29 puste
-    for row_num in range(21, 30):
-        rows_xml.append(f'<row r="{row_num}" spans="2:2"><c r="B{row_num}" s="106"/></row>')
-    
-    sheet1_xml = (
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
-        ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
-        ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
-        ' mc:Ignorable="x14ac xr xr2 xr3"'
-        ' xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac"'
-        ' xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"'
-        ' xmlns:xr2="http://schemas.microsoft.com/office/spreadsheetml/2015/revision2"'
-        ' xmlns:xr3="http://schemas.microsoft.com/office/spreadsheetml/2016/revision3"'
-        ' xr:uid="{B657F5AE-D978-2546-81E1-E5CDD56975F5}">'
-        '<dimension ref="A1:B29"/>'
-        '<sheetViews><sheetView workbookViewId="0">'
-        '<selection activeCell="C2" sqref="C2:C29"/>'
-        '</sheetView></sheetViews>'
-        '<sheetFormatPr baseColWidth="10" defaultRowHeight="13"/>'
-        '<sheetData>'
-        + "".join(rows_xml) +
-        '</sheetData>'
-        '</worksheet>'
-    ).encode("utf-8")
-    
-    # Nowy shared strings XML
-    new_ss_xml = _build_shared_strings_xml(strings)
-    
-    # Złóż nowy ZIP — kopiuj wszystko, podmień sheet1.xml i sharedStrings.xml
-    out_buf = io.BytesIO()
-    with zipfile.ZipFile(out_buf, "w", zipfile.ZIP_DEFLATED) as out_zip:
-        for item in src_zip.infolist():
-            if item.filename == "xl/worksheets/sheet1.xml":
-                out_zip.writestr(item.filename, sheet1_xml)
-            elif item.filename == "xl/sharedStrings.xml":
-                out_zip.writestr(item.filename, new_ss_xml)
-            elif item.filename == "xl/calcChain.xml":
-                pass  # Usuń calcChain - Excel odbuduje
-            else:
-                out_zip.writestr(item, src_zip.read(item.filename))
-    
-    src_zip.close()
-    out_buf.seek(0)
-    return out_buf
-
-
-# ── Routes ───────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     return send_from_directory(".", "index.html")
@@ -258,30 +97,50 @@ Zwróć WYŁĄCZNIE JSON, zero tekstu przed ani po:
 
 @app.route("/api/export", methods=["POST"])
 def export():
-    body    = request.get_json()
+    body = request.get_json()
     t       = body.get("type", "MT").upper()
     proby   = body.get("proby", [])
-    spawacz = body.get("spawacz", "") or ""
-    projekt = body.get("projekt", "") or ""
+    spawacz = body.get("spawacz", "")
+    projekt = body.get("projekt", "")
 
     if t not in TEMPLATES:
         return jsonify({"error": f"Brak szablonu {t}__wzor.xlsx"}), 400
 
-    try:
-        buf = patch_xlsx(
-            template_bytes=TEMPLATES[t],
-            today_date=date.today(),
-            proby=proby,
-            spawacz=spawacz,
-            projekt=projekt
-        )
-    except Exception as e:
-        return jsonify({"error": f"Błąd generowania pliku: {e}"}), 500
+    wb = openpyxl.load_workbook(BytesIO(TEMPLATES[t]))
+    ws = wb["DANE"]
 
+    # Wyczyść tylko komórki danych (A1:B20), NIE dotykaj formuł w innych arkuszach
+    for r in range(1, 21):
+        ws.cell(row=r, column=1).value = None
+        ws.cell(row=r, column=2).value = None
+
+    # A1 = data (str1!I12)
+    ws["A1"] = date.today()
+    ws["A1"].number_format = "DD.MM.YYYY"
+
+    # A2 = pierwsza próba / opis (str1!S17 — "PRÓBKA SPAWALNICZA")
+    ws["A2"] = proby[0] if proby else ""
+
+    # A3 = spawacz (str1!S21)
+    ws["A3"] = spawacz
+
+    # A4 = projekt (opcjonalnie, arkusze nie odwołują się, ale zachowujemy)
+    ws["A4"] = projekt
+
+    # B1..B20 = lista prób po jednej (str2!B29..B48)
+    for i, p in enumerate(proby):
+        if i >= 20:
+            break
+        ws.cell(row=i + 1, column=2).value = p
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    # Nazwa pliku: TYP_próba1_próba2_..._spawacz.xlsx
     spawacz_safe = spawacz.replace(" ", "_").upper()
-    proby_str    = "_".join(proby)
-    fname        = f"{t}_{proby_str}_{spawacz_safe}.xlsx"
-
+    proby_str = "_".join(proby)
+    fname = f"{t}_{proby_str}_{spawacz_safe}.xlsx"
     return send_file(
         buf,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
