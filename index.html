@@ -7,103 +7,92 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0d0f14; --surface:#161921; --surface2:#1e2230;
-  --border:#2a2f3e; --accent:#00c8ff; --accent2:#ff6b35;
-  --mt:#ff6b35; --ut:#00c8ff; --text:#e8eaf0; --muted:#6b7280;
-  --ok:#22c55e; --err:#ef4444;
+  --bg:#f0f4f8; --surface:#ffffff; --surface2:#f5f7fa;
+  --border:#dde3ec; --accent:#0072c6; --accent2:#e05a1e;
+  --mt:#e05a1e; --ut:#0072c6; --text:#1a2233; --muted:#6b7a90;
+  --ok:#16a34a; --err:#dc2626;
   --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
-.app{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:20px 16px 60px}
+.app{max-width:500px;margin:0 auto;padding:20px 16px 60px}
 
 /* HEADER */
-.header{display:flex;align-items:center;gap:12px;padding:20px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
-.logo{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#0066aa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;flex-shrink:0}
+.header{display:flex;align-items:center;gap:14px;padding:20px 0 24px;border-bottom:2px solid var(--border);margin-bottom:24px}
+.logo{width:46px;height:46px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,114,198,.25)}
 .header h1{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
 .header p{font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
-
-/* API KEY */
-.api-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:20px}
-.api-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.api-row{display:flex;gap:8px}
-.api-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
-.api-input:focus{border-color:var(--accent)}
-.api-toggle{background:transparent;border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--muted);cursor:pointer;font-size:14px}
-.api-hint{font-size:10px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
-.api-hint a{color:var(--accent);text-decoration:none}
 
 /* SECTION LABEL */
 .slabel{font-family:var(--mono);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
 /* UPLOAD */
-.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
-.upload-zone:hover,.upload-zone.over{border-color:var(--accent);background:rgba(0,200,255,.05)}
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
+.upload-zone:hover,.upload-zone.over{border-color:var(--accent);background:#e8f2fb}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.upload-zone .ico{font-size:38px;display:block;margin-bottom:12px}
-.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.upload-zone .ico{font-size:40px;display:block;margin-bottom:12px}
+.upload-zone h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--text)}
 .upload-zone p{font-size:12px;color:var(--muted)}
-.preview{margin-top:14px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#000}
+.preview{margin-top:14px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#f8fafc}
 .preview img{width:100%;max-height:280px;object-fit:contain;display:block}
-.preview-lbl{padding:7px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface);display:flex;justify-content:space-between}
+.preview-lbl{padding:7px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface2);display:flex;justify-content:space-between}
 
 /* SCAN BTN */
-.scan-btn{display:none;width:100%;margin-top:14px;padding:16px;background:linear-gradient(135deg,var(--accent),#0088cc);border:none;border-radius:10px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
-.scan-btn:hover{opacity:.9}
-.scan-btn:disabled{opacity:.5;cursor:not-allowed}
+.scan-btn{display:none;width:100%;margin-top:14px;padding:16px;background:var(--accent);border:none;border-radius:12px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 2px 10px rgba(0,114,198,.3)}
+.scan-btn:hover{background:#005fa3;box-shadow:0 4px 16px rgba(0,114,198,.4)}
+.scan-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
 
 /* PROGRESS */
-.progress{display:none;margin-top:12px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden}
+.progress{display:none;margin-top:12px;background:var(--border);border-radius:4px;height:5px;overflow:hidden}
 .pfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;width:0%;transition:width .3s}
 .status-msg{display:none;margin-top:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)}
 
 /* ERROR */
-.error-box{display:none;margin-top:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;font-size:12px;color:#fca5a5;font-family:var(--mono)}
+.error-box{display:none;margin-top:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px;font-size:12px;color:#b91c1c;font-family:var(--mono)}
 
 /* RESULTS */
 #results{display:none;margin-top:28px}
 .divider{height:1px;background:var(--border);margin:20px 0}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.icard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .icard .lbl{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.icard .val{font-size:13px;font-weight:600;word-break:break-all}
+.icard .val{font-size:14px;font-weight:600;word-break:break-all;color:var(--text)}
 .pcols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
-.pcol{background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.pcol{background:var(--surface);border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .phdr{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
-.phdr.mt{background:rgba(255,107,53,.1)}
-.phdr.ut{background:rgba(0,200,255,.1)}
-.badge{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.phdr.mt{background:#fff4ef}
+.phdr.ut{background:#eef4fb}
+.badge{font-family:var(--mono);font-size:12px;font-weight:600;padding:3px 9px;border-radius:5px}
 .badge.mt{background:var(--mt);color:#fff}
-.badge.ut{background:var(--ut);color:#000}
+.badge.ut{background:var(--ut);color:#fff}
 .pcnt{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .plist{padding:10px;min-height:60px}
-.pitem{font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:4px;border:1px solid transparent}
-.pitem.mt{background:rgba(255,107,53,.08);border-color:rgba(255,107,53,.2);color:#ffb08a}
-.pitem.ut{background:rgba(0,200,255,.08);border-color:rgba(0,200,255,.2);color:#7de8ff}
+.pitem{font-family:var(--mono);font-size:12px;padding:5px 9px;border-radius:6px;margin-bottom:4px;border:1px solid transparent}
+.pitem.mt{background:#fff0ea;border-color:#fbc9ad;color:#9c3b0e}
+.pitem.ut{background:#e8f1fb;border-color:#b5cff0;color:#0a4d8f}
 .pempty{font-size:11px;color:var(--muted);padding:8px;font-style:italic}
 .erow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.ebtn{padding:14px 10px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.ebtn{padding:14px 10px;border:none;border-radius:12px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
 .ebtn .ico{font-size:20px}
-.ebtn.mt{background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.4);color:var(--mt)}
-.ebtn.ut{background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);color:var(--ut)}
-.ebtn:hover{filter:brightness(1.2);transform:translateY(-2px)}
-.ebtn:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.ebtn-all{width:100%;padding:14px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--ok);text-transform:uppercase;transition:all .2s}
-.ebtn-all:disabled{opacity:.3;cursor:not-allowed}
-.ebtn-all:hover:not(:disabled){filter:brightness(1.2)}
-.reset-btn{width:100%;margin-top:20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase}
-.reset-btn:hover{border-color:var(--text);color:var(--text)}
-.email-section{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.ebtn.mt{background:#fff0ea;border:1.5px solid #f0a07a;color:#c04a10}
+.ebtn.ut{background:#e8f1fb;border:1.5px solid #7aacde;color:#0058a0}
+.ebtn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.ebtn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+.ebtn-all{width:100%;padding:14px;border:none;border-radius:12px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:1px;background:#f0faf4;border:1.5px solid #86efac;color:#15803d;text-transform:uppercase;transition:all .2s}
+.ebtn-all:disabled{opacity:.35;cursor:not-allowed}
+.ebtn-all:hover:not(:disabled){background:#dcfce7;box-shadow:0 3px 10px rgba(22,163,74,.2)}
+.reset-btn{width:100%;margin-top:20px;padding:12px;background:transparent;border:1.5px solid var(--border);border-radius:10px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase}
+.reset-btn:hover{border-color:var(--text);color:var(--text);background:var(--surface)}
+.email-section{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .email-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .email-row{display:flex;gap:8px}
-.email-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
+.email-input{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
 .email-input:focus{border-color:var(--accent)}
-.email-btn{padding:9px 14px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);border-radius:7px;color:var(--ut);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .2s}
-.email-btn:hover{filter:brightness(1.2)}
+.email-btn{padding:9px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.email-btn:hover{background:#005fa3}
 
 /* TOAST */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--surface2);border:1px solid var(--ok);border-radius:8px;padding:10px 22px;font-family:var(--mono);font-size:12px;color:var(--ok);transition:transform .3s;z-index:999;white-space:nowrap}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:#fff;border:1px solid #86efac;border-radius:10px;padding:10px 22px;font-family:var(--mono);font-size:12px;color:var(--ok);transition:transform .3s;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
@@ -115,11 +104,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div>
       <h1>Skaner Prób</h1>
       <p>Alstom · MT / UT · OCR</p>
-      <p style="font-size:11px;color:#ef4444;margin-top:4px;font-family:var(--mono);letter-spacing:1px;">Created by Borcios</p>
+      <p style="font-size:11px;color:#e05a1e;margin-top:4px;font-family:var(--mono);letter-spacing:1px;">Created by Borcios</p>
     </div>
   </div>
 
-  <!-- klucz API wbudowany w server.py -->
   <input type="hidden" id="apiKey" value="">
 
   <!-- UPLOAD -->
@@ -186,17 +174,9 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <div class="toast" id="toast"></div>
 
-
 <script>
 let imgB64 = null, currentResult = null;
 
-// ── API KEY ──────────────────────────────────────────
-function toggleKey() {
-  const el = document.getElementById('apiKey');
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
-// ── FILE HANDLING ────────────────────────────────────
 function onDrop(e) {
   e.preventDefault();
   document.getElementById('zone').classList.remove('over');
@@ -237,26 +217,21 @@ function onFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ── SCAN ─────────────────────────────────────────────
 async function scan() {
-  const apiKey = '';
   if (!imgB64) { showError('Najpierw wczytaj zdjęcie!'); return; }
-
   const btn = document.getElementById('scanBtn');
   btn.disabled = true; btn.textContent = '⏳ Analizuję…';
   document.getElementById('progressBar').style.display = 'block';
   document.getElementById('statusMsg').style.display = 'block';
   document.getElementById('errorBox').style.display = 'none';
   document.getElementById('results').style.display = 'none';
-
   let prog = 10;
   const iv = setInterval(() => { prog = Math.min(prog + 6, 85); document.getElementById('pfill').style.width = prog + '%'; }, 400);
-
   try {
     const resp = await fetch('/api/scan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, image_base64: imgB64 })
+      body: JSON.stringify({ api_key: '', image_base64: imgB64 })
     });
     clearInterval(iv);
     document.getElementById('pfill').style.width = '100%';
@@ -274,12 +249,10 @@ async function scan() {
   }
 }
 
-// ── RESULTS ──────────────────────────────────────────
 function showResults(d) {
   document.getElementById('rSpawacz').textContent = d.spawacz || '?';
   document.getElementById('rProjekt').textContent = d.projekt || '?';
   const mt = d.mt_proby || [], ut = d.ut_proby || [];
-
   const fill = (listId, cntId, items, cls) => {
     const el = document.getElementById(listId);
     el.innerHTML = items.length
@@ -289,7 +262,6 @@ function showResults(d) {
   };
   fill('mtList', 'mtCnt', mt, 'mt');
   fill('utList', 'utCnt', ut, 'ut');
-
   document.getElementById('btnMT').disabled = mt.length === 0;
   document.getElementById('btnUT').disabled = ut.length === 0;
   document.getElementById('btnBoth').disabled = mt.length === 0 && ut.length === 0;
@@ -298,7 +270,6 @@ function showResults(d) {
   document.getElementById('emailSection').style.display = 'block';
 }
 
-// ── EXCEL EXPORT — przez serwer Python (zachowuje str1/str2) ──
 async function exportXLSX(type) {
   if (!currentResult) return;
   const types = type === 'BOTH' ? ['MT','UT'] : [type];
@@ -309,7 +280,6 @@ async function exportXLSX(type) {
   }
 }
 
-// Przechowuje pobrane pliki do wysyłki emailem
 const downloadedFiles = {};
 
 async function downloadFromServer(type, proby, spawacz, projekt) {
@@ -325,23 +295,14 @@ async function downloadFromServer(type, proby, spawacz, projekt) {
       return null;
     }
     const blob = await resp.blob();
-
-    // Buduj nazwę pliku tak samo jak serwer
     const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
     const probyStr = proby.join('_');
     const fname = `${type}_${probyStr}_${spawaczSafe}.xlsx`;
-
-    // Zapisz blob do późniejszego emaila
     downloadedFiles[type] = { blob, fname };
-
-    // Pobierz plik
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     showToast(`✓ Pobrano ${fname}`);
     return { blob, fname };
@@ -351,66 +312,42 @@ async function downloadFromServer(type, proby, spawacz, projekt) {
   }
 }
 
-
-// ── EMAIL ─────────────────────────────────────────────
 async function sendEmail() {
   const to = document.getElementById('emailTo').value.trim();
   if (!to) { showError('Wpisz adres email odbiorcy!'); return; }
   if (!currentResult) return;
-
   const mt = currentResult.mt_proby || [];
   const ut = currentResult.ut_proby || [];
   const spawacz = currentResult.spawacz || '';
   const projekt = currentResult.projekt || '';
-
   const subject = `NDT Wyniki — ${projekt} — ${spawacz}`;
   let bodyText = `Dzień dobry,\n\nW załączeniu przesyłam wyniki badań nieniszczących.\n\n`;
   bodyText += `Spawacz: ${spawacz}\nProjekt: ${projekt}\n\n`;
   if (mt.length) bodyText += `Próby MT (${mt.length}): ${mt.join(', ')}\n`;
   if (ut.length) bodyText += `Próby UT (${ut.length}): ${ut.join(', ')}\n`;
   bodyText += `\nPozdrawiam`;
-
-  // Generuj pliki jeśli jeszcze nie ma
   const btn = document.querySelector('.email-btn');
-  btn.textContent = '⏳ Generuję...';
-  btn.disabled = true;
-
+  btn.textContent = '⏳ Generuję...'; btn.disabled = true;
   const filesToAttach = [];
   for (const [type, proby] of [['MT', mt], ['UT', ut]]) {
     if (!proby.length) continue;
-    if (!downloadedFiles[type]) {
-      await downloadFromServer(type, proby, spawacz, projekt);
-    }
+    if (!downloadedFiles[type]) await downloadFromServer(type, proby, spawacz, projekt);
     if (downloadedFiles[type]) {
       const { blob, fname } = downloadedFiles[type];
-      filesToAttach.push(new File([blob], fname, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }));
+      filesToAttach.push(new File([blob], fname, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     }
   }
-
-  btn.textContent = 'Wyślij ✉';
-  btn.disabled = false;
-
-  // Web Share API z plikami (iPhone/Android)
+  btn.textContent = 'Wyślij ✉'; btn.disabled = false;
   if (filesToAttach.length && navigator.canShare && navigator.canShare({ files: filesToAttach })) {
-    try {
-      await navigator.share({ title: subject, text: bodyText, files: filesToAttach });
-      return;
-    } catch(e) {
-      if (e.name === 'AbortError') return;
-    }
+    try { await navigator.share({ title: subject, text: bodyText, files: filesToAttach }); return; }
+    catch(e) { if (e.name === 'AbortError') return; }
   }
-
-  // Fallback mailto (desktop)
   window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
 }
 
-// ── HELPERS ───────────────────────────────────────────
 function showError(msg) {
   const b = document.getElementById('errorBox');
-  b.textContent = '⚠ ' + msg;
-  b.style.display = 'block';
+  b.textContent = '⚠ ' + msg; b.style.display = 'block';
 }
 
 function showToast(msg) {

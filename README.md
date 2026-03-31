@@ -1,10 +1,10 @@
-# Alstom NDT — Skaner Prób v3.0
+# Alstom NDT — Skaner Prób v3.1
 ## Wdrożenie na Render.com (darmowe)
 
 ### Krok 1 — GitHub
 1. Wejdź na github.com i załóż darmowe konto
 2. Kliknij "New repository" → nazwa: `ndt-app` → Public → Create
-3. Wgraj wszystkie pliki z tego folderu (przeciągnij do przeglądarki)
+3. Wgraj WSZYSTKIE pliki z tego folderu (przeciągnij do przeglądarki)
 
 ### Krok 2 — Render
 1. Wejdź na render.com → "Get Started for Free"
@@ -26,7 +26,12 @@
 2. Wejdź na link który da Render (np. https://ndt-app.onrender.com)
 3. Kliknij przycisk "Udostępnij" (kwadrat ze strzałką)
 4. Wybierz "Dodaj do ekranu głównego"
-5. Gotowe — apka działa jak natywna!
+5. Gotowe!
+
+### Co nowego w v3.1
+- Jasny motyw (biało-niebieski)
+- Obrazki w szablonach Excel są w 100% zachowane (logo Alstom, pieczątki)
+- Nie wymaga openpyxl — czystsza instalacja
 
 ### Uwaga
 Darmowy plan Render "zasypia" po 15 min bezczynności.

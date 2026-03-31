@@ -1,4 +1,4 @@
-const CACHE = "ndt-v1";
+const CACHE = "ndt-v2";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", e => {
@@ -14,7 +14,6 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
-  // API calls — zawsze sieć
   if (e.request.url.includes("/api/")) return;
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
