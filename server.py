@@ -21,6 +21,14 @@ from email import encoders
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({"error": str(e)}), 500
+
+@app.errorhandler(404)
+def handle_404(e):
+    return send_from_directory(".", "index.html")
+
 API_KEY      = os.environ.get("ANTHROPIC_API_KEY", "")
 GMAIL_USER   = os.environ.get("GMAIL_USER", "")       # np. olgierd.moryc@gmail.com
 GMAIL_PASS   = os.environ.get("GMAIL_APP_PASSWORD", "") # App Password z Google
