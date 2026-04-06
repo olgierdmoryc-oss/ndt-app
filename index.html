@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Alstom NDT — Skaner Prób</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -180,7 +181,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <button class="ebtn ut" id="btnUT" disabled onclick="exportXLSX('UT')"><span class="ico">🔊</span>Pobierz UT</button>
       <button class="ebtn pt" id="btnPT" disabled onclick="exportXLSX('PT')"><span class="ico">🔬</span>Pobierz PT</button>
     </div>
-    <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('ALL')">⬇ Pobierz wszystkie pliki</button>
+    <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('ALL')">⬇ Pobierz ZIP (MT + UT + PT)</button>
 
     <div class="email-section" id="emailSection" style="display:none">
       <div class="lbl">📧 Wyślij email z plikami</div>
@@ -309,53 +310,87 @@ function showResults(d) {
   document.getElementById('emailSection').style.display = 'block';
 }
 
-// ── EXCEL EXPORT — przez serwer Python (zachowuje str1/str2) ──
+// ── EXCEL EXPORT ─────────────────────────────────────
+const downloadedFiles = {};
+
+async function fetchXLSX(type, proby, spawacz, projekt) {
+  const resp = await fetch('/api/export', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({type, proby, spawacz, projekt})
+  });
+  if (!resp.ok) {
+    const err = await resp.json();
+    throw new Error(err.error || 'Błąd eksportu');
+  }
+  const blob = await resp.blob();
+  const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
+  const fname = `${type}_${proby.join('_')}_${spawaczSafe}.xlsx`;
+  downloadedFiles[type] = { blob, fname };
+  return { blob, fname };
+}
+
 async function exportXLSX(type) {
   if (!currentResult) return;
-  const types = type === 'ALL' ? ['MT','UT','PT'] : [type];
-  for (const t of types) {
-    const proby = t === 'MT' ? (currentResult.mt_proby||[]) : t === 'UT' ? (currentResult.ut_proby||[]) : (currentResult.pt_proby||[]);
-    if (!proby.length) continue;
-    await downloadFromServer(t, proby, currentResult.spawacz, currentResult.projekt);
+  const { spawacz, projekt } = currentResult;
+
+  // Pojedynczy typ — pobierz bezpośrednio
+  if (type !== 'ALL') {
+    const proby = currentResult[`${type.toLowerCase()}_proby`] || [];
+    if (!proby.length) return;
+    try {
+      const { blob, fname } = await fetchXLSX(type, proby, spawacz, projekt);
+      triggerDownload(blob, fname);
+      showToast(`✓ Pobrano ${fname}`);
+    } catch(e) { showError(e.message); }
+    return;
+  }
+
+  // ALL — zbierz wszystkie i spakuj do ZIP
+  const btn = document.getElementById('btnBoth');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generuję ZIP…';
+
+  try {
+    const zip = new JSZip();
+    const types = [['MT', currentResult.mt_proby||[]], ['UT', currentResult.ut_proby||[]], ['PT', currentResult.pt_proby||[]]];
+    let count = 0;
+    for (const [t, proby] of types) {
+      if (!proby.length) continue;
+      const { blob, fname } = await fetchXLSX(t, proby, spawacz, projekt);
+      zip.file(fname, blob);
+      count++;
+    }
+    if (!count) { showError('Brak prób do eksportu'); return; }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
+    const zipName = `NDT_${projekt || 'export'}_${spawaczSafe}.zip`;
+    triggerDownload(zipBlob, zipName);
+    showToast(`✓ Pobrano ${zipName} (${count} plik${count > 1 ? 'i' : ''})`);
+  } catch(e) {
+    showError('Błąd ZIP: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ Pobierz ZIP (MT + UT + PT)';
   }
 }
 
-// Przechowuje pobrane pliki do wysyłki emailem
-const downloadedFiles = {};
+function triggerDownload(blob, fname) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 async function downloadFromServer(type, proby, spawacz, projekt) {
   try {
-    const resp = await fetch('/api/export', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({type, proby, spawacz, projekt})
-    });
-    if (!resp.ok) {
-      const err = await resp.json();
-      showError(err.error || 'Błąd eksportu');
-      return null;
-    }
-    const blob = await resp.blob();
-
-    // Buduj nazwę pliku tak samo jak serwer
-    const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
-    const probyStr = proby.join('_');
-    const fname = `${type}_${probyStr}_${spawaczSafe}.xlsx`;
-
-    // Zapisz blob do późniejszego emaila
-    downloadedFiles[type] = { blob, fname };
-
-    // Pobierz plik
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fname;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast(`✓ Pobrano ${fname}`);
-    return { blob, fname };
+    const result = await fetchXLSX(type, proby, spawacz, projekt);
+    triggerDownload(result.blob, result.fname);
+    showToast(`✓ Pobrano ${result.fname}`);
+    return result;
   } catch(e) {
     showError('Błąd eksportu: ' + e.message);
     return null;
@@ -391,7 +426,7 @@ async function sendEmail() {
   for (const [type, proby] of [['MT', mt], ['UT', ut], ['PT', pt]]) {
     if (!proby.length) continue;
     if (!downloadedFiles[type]) {
-      await downloadFromServer(type, proby, spawacz, projekt);
+      await fetchXLSX(type, proby, spawacz, projekt);
     }
     if (downloadedFiles[type]) {
       const { blob, fname } = downloadedFiles[type];
