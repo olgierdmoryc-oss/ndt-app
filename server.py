@@ -181,6 +181,11 @@ def build_xlsx(t, proby, spawacz, projekt):
             data = zin.read(item.filename)
             if item.filename == dane_file:
                 data = patch_dane_sheet(data, proby, spawacz, projekt)
+            elif item.filename == 'xl/workbook.xml':
+                # Wymuś przeliczenie wszystkich formuł przy otwarciu
+                xml = data.decode('utf-8')
+                xml = re.sub(r'<calcPr[^/]*/>', '<calcPr calcId="191029" fullCalcOnLoad="1"/>', xml)
+                data = xml.encode('utf-8')
             zout.writestr(item, data)
     out.seek(0)
     return out
