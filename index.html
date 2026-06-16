@@ -4,14 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Alstom NDT — Skaner Prób</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#0d0f14; --surface:#161921; --surface2:#1e2230;
   --border:#2a2f3e; --accent:#00c8ff; --accent2:#ff6b35;
-  --mt:#ff6b35; --ut:#00c8ff; --text:#e8eaf0; --muted:#6b7280;
-  --ok:#22c55e; --err:#ef4444; --pt:#a855f7;
+  --mt:#ff6b35; --ut:#00c8ff; --pt:#a855f7;
+  --text:#e8eaf0; --muted:#6b7280;
+  --ok:#22c55e; --err:#ef4444;
   --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -19,26 +19,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,200,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
 .app{position:relative;z-index:1;max-width:500px;margin:0 auto;padding:20px 16px 60px}
 
-/* HEADER */
 .header{display:flex;align-items:center;gap:12px;padding:20px 0 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
 .logo{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),#0066aa);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;flex-shrink:0}
 .header h1{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent)}
 .header p{font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
 
-/* API KEY */
-.api-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:20px}
-.api-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.api-row{display:flex;gap:8px}
-.api-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none}
-.api-input:focus{border-color:var(--accent)}
-.api-toggle{background:transparent;border:1px solid var(--border);border-radius:7px;padding:9px 12px;color:var(--muted);cursor:pointer;font-size:14px}
-.api-hint{font-size:10px;color:var(--muted);margin-top:7px;font-family:var(--mono)}
-.api-hint a{color:var(--accent);text-decoration:none}
-
-/* SECTION LABEL */
 .slabel{font-family:var(--mono);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
-/* UPLOAD */
 .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;background:var(--surface);position:relative;transition:all .2s}
 .upload-zone:hover,.upload-zone.over{border-color:var(--accent);background:rgba(0,200,255,.05)}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -49,46 +36,46 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .preview img{width:100%;max-height:280px;object-fit:contain;display:block}
 .preview-lbl{padding:7px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface);display:flex;justify-content:space-between}
 
-/* SCAN BTN */
 .scan-btn{display:none;width:100%;margin-top:14px;padding:16px;background:linear-gradient(135deg,var(--accent),#0088cc);border:none;border-radius:10px;color:#fff;font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
 .scan-btn:hover{opacity:.9}
 .scan-btn:disabled{opacity:.5;cursor:not-allowed}
 
-/* PROGRESS */
 .progress{display:none;margin-top:12px;background:var(--surface2);border-radius:4px;height:4px;overflow:hidden}
 .pfill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;width:0%;transition:width .3s}
 .status-msg{display:none;margin-top:8px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)}
 
-/* ERROR */
 .error-box{display:none;margin-top:14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;font-size:12px;color:#fca5a5;font-family:var(--mono)}
 
-/* RESULTS */
 #results{display:none;margin-top:28px}
 .divider{height:1px;background:var(--border);margin:20px 0}
 .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .icard{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
 .icard .lbl{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
 .icard .val{font-size:13px;font-weight:600;word-break:break-all}
+
+/* 3 kolumny dla MT/UT/PT */
 .pcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
 .pcol{background:var(--surface);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
-.phdr{padding:10px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.phdr{padding:8px 10px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border)}
 .phdr.mt{background:rgba(255,107,53,.1)}
 .phdr.ut{background:rgba(0,200,255,.1)}
 .phdr.pt{background:rgba(168,85,247,.1)}
-.badge{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 8px;border-radius:4px}
+.badge{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 6px;border-radius:4px}
 .badge.mt{background:var(--mt);color:#fff}
 .badge.ut{background:var(--ut);color:#000}
 .badge.pt{background:var(--pt);color:#fff}
-.pcnt{font-family:var(--mono);font-size:11px;color:var(--muted)}
-.plist{padding:10px;min-height:60px}
-.pitem{font-family:var(--mono);font-size:12px;padding:5px 8px;border-radius:5px;margin-bottom:4px;border:1px solid transparent}
+.pcnt{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.plist{padding:8px;min-height:50px}
+.pitem{font-family:var(--mono);font-size:11px;padding:4px 6px;border-radius:4px;margin-bottom:3px;border:1px solid transparent}
 .pitem.mt{background:rgba(255,107,53,.08);border-color:rgba(255,107,53,.2);color:#ffb08a}
 .pitem.ut{background:rgba(0,200,255,.08);border-color:rgba(0,200,255,.2);color:#7de8ff}
 .pitem.pt{background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.2);color:#d8b4fe}
-.pempty{font-size:11px;color:var(--muted);padding:8px;font-style:italic}
-.erow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px}
-.ebtn{padding:14px 10px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:12px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:5px}
-.ebtn .ico{font-size:20px}
+.pempty{font-size:10px;color:var(--muted);padding:6px;font-style:italic}
+
+/* Przyciski eksportu */
+.erow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.ebtn{padding:12px 6px;border:none;border-radius:10px;cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:600;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ebtn .ico{font-size:18px}
 .ebtn.mt{background:rgba(255,107,53,.15);border:1px solid rgba(255,107,53,.4);color:var(--mt)}
 .ebtn.ut{background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);color:var(--ut)}
 .ebtn.pt{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);color:var(--pt)}
@@ -99,6 +86,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .ebtn-all:hover:not(:disabled){filter:brightness(1.2)}
 .reset-btn{width:100%;margin-top:20px;padding:12px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s;letter-spacing:1px;text-transform:uppercase}
 .reset-btn:hover{border-color:var(--text);color:var(--text)}
+
 .email-section{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
 .email-section .lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .email-row{display:flex;gap:8px}
@@ -107,7 +95,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .email-btn{padding:9px 14px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.3);border-radius:7px;color:var(--ut);font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap;transition:all .2s}
 .email-btn:hover{filter:brightness(1.2)}
 
-/* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--surface2);border:1px solid var(--ok);border-radius:8px;padding:10px 22px;font-family:var(--mono);font-size:12px;color:var(--ok);transition:transform .3s;z-index:999;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
 </style>
@@ -119,15 +106,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="logo">NDT</div>
     <div>
       <h1>Skaner Prób</h1>
-      <p>Alstom · MT / UT · OCR</p>
+      <p>Alstom · MT / UT / PT · OCR</p>
       <p style="font-size:11px;color:#ef4444;margin-top:4px;font-family:var(--mono);letter-spacing:1px;">Created by Borcios</p>
     </div>
   </div>
 
-  <!-- klucz API wbudowany w server.py -->
   <input type="hidden" id="apiKey" value="">
 
-  <!-- UPLOAD -->
   <div class="slabel">01 — Wczytaj formularz</div>
   <div class="upload-zone" id="zone"
     ondrop="onDrop(event)" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')">
@@ -152,7 +137,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="status-msg" id="statusMsg">Wysyłanie do Claude AI…</div>
   <div class="error-box" id="errorBox"></div>
 
-  <!-- RESULTS -->
   <div id="results">
     <div class="divider"></div>
     <div class="slabel">02 — Wyniki odczytu</div>
@@ -162,15 +146,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     </div>
     <div class="pcols">
       <div class="pcol">
-        <div class="phdr mt"><span class="badge mt">MT</span><span class="pcnt" id="mtCnt">0 prób</span></div>
+        <div class="phdr mt"><span class="badge mt">MT</span><span class="pcnt" id="mtCnt">0</span></div>
         <div class="plist" id="mtList"><div class="pempty">brak</div></div>
       </div>
       <div class="pcol">
-        <div class="phdr ut"><span class="badge ut">UT</span><span class="pcnt" id="utCnt">0 prób</span></div>
+        <div class="phdr ut"><span class="badge ut">UT</span><span class="pcnt" id="utCnt">0</span></div>
         <div class="plist" id="utList"><div class="pempty">brak</div></div>
       </div>
       <div class="pcol">
-        <div class="phdr pt"><span class="badge pt">PT</span><span class="pcnt" id="ptCnt">0 prób</span></div>
+        <div class="phdr pt"><span class="badge pt">PT</span><span class="pcnt" id="ptCnt">0</span></div>
         <div class="plist" id="ptList"><div class="pempty">brak</div></div>
       </div>
     </div>
@@ -181,7 +165,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <button class="ebtn ut" id="btnUT" disabled onclick="exportXLSX('UT')"><span class="ico">🔊</span>Pobierz UT</button>
       <button class="ebtn pt" id="btnPT" disabled onclick="exportXLSX('PT')"><span class="ico">🔬</span>Pobierz PT</button>
     </div>
-    <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('ALL')">⬇ Pobierz ZIP (MT + UT + PT)</button>
+    <button class="ebtn-all" id="btnBoth" disabled onclick="exportXLSX('ALL')">⬇ Pobierz wszystkie pliki</button>
 
     <div class="email-section" id="emailSection" style="display:none">
       <div class="lbl">📧 Wyślij email z plikami</div>
@@ -196,17 +180,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 <div class="toast" id="toast"></div>
 
-
 <script>
 let imgB64 = null, currentResult = null;
+const downloadedFiles = {};
 
-// ── API KEY ──────────────────────────────────────────
-function toggleKey() {
-  const el = document.getElementById('apiKey');
-  el.type = el.type === 'password' ? 'text' : 'password';
-}
-
-// ── FILE HANDLING ────────────────────────────────────
 function onDrop(e) {
   e.preventDefault();
   document.getElementById('zone').classList.remove('over');
@@ -247,11 +224,8 @@ function onFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ── SCAN ─────────────────────────────────────────────
 async function scan() {
-  const apiKey = '';
   if (!imgB64) { showError('Najpierw wczytaj zdjęcie!'); return; }
-
   const btn = document.getElementById('scanBtn');
   btn.disabled = true; btn.textContent = '⏳ Analizuję…';
   document.getElementById('progressBar').style.display = 'block';
@@ -265,8 +239,8 @@ async function scan() {
   try {
     const resp = await fetch('/api/scan', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: apiKey, image_base64: imgB64 })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({image_base64: imgB64})
     });
     clearInterval(iv);
     document.getElementById('pfill').style.width = '100%';
@@ -284,7 +258,6 @@ async function scan() {
   }
 }
 
-// ── RESULTS ──────────────────────────────────────────
 function showResults(d) {
   document.getElementById('rSpawacz').textContent = d.spawacz || '?';
   document.getElementById('rProjekt').textContent = d.projekt || '?';
@@ -294,12 +267,12 @@ function showResults(d) {
     const el = document.getElementById(listId);
     el.innerHTML = items.length
       ? items.map(p => `<div class="pitem ${cls}">${p}</div>`).join('')
-      : `<div class="pempty">brak prób ${cls.toUpperCase()}</div>`;
-    document.getElementById(cntId).textContent = items.length + ' prób';
+      : `<div class="pempty">brak</div>`;
+    document.getElementById(cntId).textContent = items.length;
   };
-  fill('mtList', 'mtCnt', mt, 'mt');
-  fill('utList', 'utCnt', ut, 'ut');
-  fill('ptList', 'ptCnt', pt, 'pt');
+  fill('mtList','mtCnt', mt, 'mt');
+  fill('utList','utCnt', ut, 'ut');
+  fill('ptList','ptCnt', pt, 'pt');
 
   document.getElementById('btnMT').disabled = mt.length === 0;
   document.getElementById('btnUT').disabled = ut.length === 0;
@@ -310,162 +283,80 @@ function showResults(d) {
   document.getElementById('emailSection').style.display = 'block';
 }
 
-// ── EXCEL EXPORT ─────────────────────────────────────
-const downloadedFiles = {};
-
-async function fetchXLSX(type, proby, spawacz, projekt) {
-  const resp = await fetch('/api/export', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({type, proby, spawacz, projekt})
-  });
-  if (!resp.ok) {
-    const err = await resp.json();
-    throw new Error(err.error || 'Błąd eksportu');
-  }
-  const blob = await resp.blob();
-  const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
-  const fname = `${type}_${proby.join('_')}_${spawaczSafe}.xlsx`;
-  downloadedFiles[type] = { blob, fname };
-  return { blob, fname };
-}
-
 async function exportXLSX(type) {
   if (!currentResult) return;
-  const { spawacz, projekt } = currentResult;
-
-  // Pojedynczy typ — pobierz bezpośrednio
-  if (type !== 'ALL') {
-    const proby = currentResult[`${type.toLowerCase()}_proby`] || [];
-    if (!proby.length) return;
-    try {
-      const { blob, fname } = await fetchXLSX(type, proby, spawacz, projekt);
-      triggerDownload(blob, fname);
-      showToast(`✓ Pobrano ${fname}`);
-    } catch(e) { showError(e.message); }
-    return;
+  const map = {MT: currentResult.mt_proby||[], UT: currentResult.ut_proby||[], PT: currentResult.pt_proby||[]};
+  const types = type === 'ALL' ? ['MT','UT','PT'] : [type];
+  for (const t of types) {
+    if (!map[t].length) continue;
+    await downloadFromServer(t, map[t], currentResult.spawacz, currentResult.projekt);
   }
-
-  // ALL — zbierz wszystkie i spakuj do ZIP
-  const btn = document.getElementById('btnBoth');
-  btn.disabled = true;
-  btn.textContent = '⏳ Generuję ZIP…';
-
-  try {
-    const zip = new JSZip();
-    const types = [['MT', currentResult.mt_proby||[]], ['UT', currentResult.ut_proby||[]], ['PT', currentResult.pt_proby||[]]];
-    let count = 0;
-    for (const [t, proby] of types) {
-      if (!proby.length) continue;
-      const { blob, fname } = await fetchXLSX(t, proby, spawacz, projekt);
-      zip.file(fname, blob);
-      count++;
-    }
-    if (!count) { showError('Brak prób do eksportu'); return; }
-
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const spawaczSafe = (spawacz || '').replace(/ /g, '_').toUpperCase();
-    const zipName = `NDT_${projekt || 'export'}_${spawaczSafe}.zip`;
-    triggerDownload(zipBlob, zipName);
-    showToast(`✓ Pobrano ${zipName} (${count} plik${count > 1 ? 'i' : ''})`);
-  } catch(e) {
-    showError('Błąd ZIP: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '⬇ Pobierz ZIP (MT + UT + PT)';
-  }
-}
-
-function triggerDownload(blob, fname) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fname;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 async function downloadFromServer(type, proby, spawacz, projekt) {
   try {
-    const result = await fetchXLSX(type, proby, spawacz, projekt);
-    triggerDownload(result.blob, result.fname);
-    showToast(`✓ Pobrano ${result.fname}`);
-    return result;
-  } catch(e) {
-    showError('Błąd eksportu: ' + e.message);
-    return null;
-  }
+    const resp = await fetch('/api/export', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({type, proby, spawacz, projekt})
+    });
+    if (!resp.ok) { const err = await resp.json(); showError(err.error || 'Błąd eksportu'); return null; }
+    const blob = await resp.blob();
+    const spawaczSafe = (spawacz||'').replace(/ /g,'_').toUpperCase();
+    const fname = `${type}_${proby.join('_')}_${spawaczSafe}.xlsx`;
+    downloadedFiles[type] = {blob, fname};
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`✓ Pobrano ${fname}`);
+    return {blob, fname};
+  } catch(e) { showError('Błąd eksportu: ' + e.message); return null; }
 }
 
-
-// ── EMAIL ─────────────────────────────────────────────
 async function sendEmail() {
   const to = document.getElementById('emailTo').value.trim();
   if (!to) { showError('Wpisz adres email odbiorcy!'); return; }
   if (!currentResult) return;
-
-  const mt = currentResult.mt_proby || [];
-  const ut = currentResult.ut_proby || [];
-  const pt = currentResult.pt_proby || [];
-  const spawacz = currentResult.spawacz || '';
-  const projekt = currentResult.projekt || '';
-
+  const mt = currentResult.mt_proby||[], ut = currentResult.ut_proby||[], pt = currentResult.pt_proby||[];
+  const spawacz = currentResult.spawacz||'', projekt = currentResult.projekt||'';
   const subject = `NDT Wyniki — ${projekt} — ${spawacz}`;
-  let bodyText = `Dzień dobry,\n\nW załączeniu przesyłam wyniki badań nieniszczących.\n\n`;
-  bodyText += `Spawacz: ${spawacz}\nProjekt: ${projekt}\n\n`;
-  if (mt.length) bodyText += `Próby MT (${mt.length}): ${mt.join(', ')}\n`;
-  if (ut.length) bodyText += `Próby UT (${ut.length}): ${ut.join(', ')}\n`;
-  bodyText += `\nPozdrawiam`;
+  let body = `Dzień dobry,\n\nW załączeniu przesyłam wyniki badań nieniszczących.\n\nSpawacz: ${spawacz}\nProjekt: ${projekt}\n\n`;
+  if (mt.length) body += `Próby MT (${mt.length}): ${mt.join(', ')}\n`;
+  if (ut.length) body += `Próby UT (${ut.length}): ${ut.join(', ')}\n`;
+  if (pt.length) body += `Próby PT (${pt.length}): ${pt.join(', ')}\n`;
+  body += `\nPozdrawiam`;
 
-  // Generuj pliki jeśli jeszcze nie ma
   const btn = document.querySelector('.email-btn');
-  btn.textContent = '⏳ Generuję...';
-  btn.disabled = true;
-
+  btn.textContent = '⏳ Generuję...'; btn.disabled = true;
   const filesToAttach = [];
-  for (const [type, proby] of [['MT', mt], ['UT', ut], ['PT', pt]]) {
+  for (const [type, proby] of [['MT',mt],['UT',ut],['PT',pt]]) {
     if (!proby.length) continue;
-    if (!downloadedFiles[type]) {
-      await fetchXLSX(type, proby, spawacz, projekt);
-    }
+    if (!downloadedFiles[type]) await downloadFromServer(type, proby, spawacz, projekt);
     if (downloadedFiles[type]) {
-      const { blob, fname } = downloadedFiles[type];
-      filesToAttach.push(new File([blob], fname, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      }));
+      const {blob, fname} = downloadedFiles[type];
+      filesToAttach.push(new File([blob], fname, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     }
   }
+  btn.textContent = 'Wyślij ✉'; btn.disabled = false;
 
-  btn.textContent = 'Wyślij ✉';
-  btn.disabled = false;
-
-  // Web Share API z plikami (iPhone/Android)
-  if (filesToAttach.length && navigator.canShare && navigator.canShare({ files: filesToAttach })) {
-    try {
-      await navigator.share({ title: subject, text: bodyText, files: filesToAttach });
-      return;
-    } catch(e) {
-      if (e.name === 'AbortError') return;
-    }
+  if (filesToAttach.length && navigator.canShare && navigator.canShare({files:filesToAttach})) {
+    try { await navigator.share({title:subject, text:body, files:filesToAttach}); return; }
+    catch(e) { if (e.name==='AbortError') return; }
   }
-
-  // Fallback mailto (desktop)
-  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-// ── HELPERS ───────────────────────────────────────────
 function showError(msg) {
   const b = document.getElementById('errorBox');
-  b.textContent = '⚠ ' + msg;
-  b.style.display = 'block';
+  b.textContent = '⚠ ' + msg; b.style.display = 'block';
 }
-
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
 }
-
 function reset() {
   imgB64 = null; currentResult = null;
   document.getElementById('fileInput').value = '';

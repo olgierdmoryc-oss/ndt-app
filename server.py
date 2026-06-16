@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 """
-Alstom NDT — Skaner Prób v3.1
+Alstom NDT — Skaner Prób v3.2
 Hosting: Render.com
 """
 
 from flask import Flask, request, jsonify, send_file, send_from_directory
 from io import BytesIO
-from datetime import date
+from datetime import date as d
 import os
 import json
+import zipfile
+import re
 import urllib.request
 import urllib.error
-import openpyxl
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    return jsonify({"error": str(e)}), 500
-
-API_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
+API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TEMPLATES = {}
@@ -31,6 +28,11 @@ for t in ["MT", "UT", "PT"]:
         print(f"✓ Wczytano {t}__wzor.xlsx")
     else:
         print(f"⚠ Brak {t}__wzor.xlsx!")
+
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")
@@ -46,20 +48,20 @@ def scan():
     if not API_KEY:
         return jsonify({"error": "Brak klucza ANTHROPIC_API_KEY na serwerze"}), 400
 
-    prompt = """Analizujesz formularz badan nieniszczacych spawow firmy Alstom.
+    prompt = """Analizujesz formularz badań nieniszczących spawów firmy Alstom.
 
-Odczytaj z naglowka formularza:
-1. SPAWACZ - tylko samo nazwisko (lub imie i nazwisko) bez tytulow i cyfr
+Odczytaj z nagłówka formularza:
+1. SPAWACZ - tylko samo nazwisko (lub imię i nazwisko) bez tytułów i cyfr
 2. PROJEKT - TYLKO sam kod/numer projektu z pierwszej ramki pola PROJEKT (np. "ALP", "ALP2") — ignoruj wszystko co jest napisane obok lub po prawej stronie
 
-Nastepnie dla kazdego wiersza tabeli z numerem proby (np. X01, X05, X13, O3, X31 itp.):
-- Kolumna MT: wpis (MT+, symbol z plusem/kolkiem) I komorka NIE zacieniona → dodaj do mt_proby
-- Kolumna UT: wpis (UT+, symbol z plusem/kolkiem) I komorka NIE zacieniona → dodaj do ut_proby
-- Kolumna PT: wpis (PT+, symbol z plusem/kolkiem) I komorka NIE zacieniona → dodaj do pt_proby
-- Komorki ZACIENIONE/SZARE = pomijamy
+Następnie dla każdego wiersza tabeli z numerem próby:
+- Kolumna MT: wpis (MT+, MtΦ itp.) I komórka NIE zacieniona → dodaj do mt_proby
+- Kolumna UT: wpis (UT+, utΦ itp.) I komórka NIE zacieniona → dodaj do ut_proby
+- Kolumna PT: wpis (PT+, PtΦ itp.) I komórka NIE zacieniona → dodaj do pt_proby
+- Komórki ZACIENIONE/SZARE = pomijamy
 
-Zwroc WYLACZNIE JSON, zero tekstu przed ani po:
-{"spawacz":"...","projekt":"...","mt_proby":["X01"],"ut_proby":["X53"],"pt_proby":["X07"]}"""
+Zwróć WYŁĄCZNIE JSON, zero tekstu przed ani po:
+{"spawacz":"...","projekt":"...","mt_proby":[],"ut_proby":[],"pt_proby":[]}"""
 
     payload = json.dumps({
         "model": "claude-sonnet-4-6",
@@ -88,9 +90,7 @@ Zwroc WYLACZNIE JSON, zero tekstu przed ani po:
             data = json.loads(resp.read())
         text = data["content"][0]["text"].strip().replace("```json", "").replace("```", "").strip()
         result = json.loads(text)
-        # Upewnij sie ze pt_proby istnieje
-        if "pt_proby" not in result:
-            result["pt_proby"] = []
+        result.setdefault("pt_proby", [])
         return jsonify({"ok": True, "result": result})
     except urllib.error.HTTPError as e:
         try:
@@ -102,9 +102,93 @@ Zwroc WYLACZNIE JSON, zero tekstu przed ani po:
         return jsonify({"error": str(e)}), 500
 
 
+def get_dane_sheet_path(raw_bytes):
+    wb_xml = zipfile.ZipFile(BytesIO(raw_bytes)).read('xl/workbook.xml').decode()
+    sheets = re.findall(r'<sheet[^>]+name="([^"]+)"[^>]+r:id="([^"]+)"', wb_xml)
+    rels_xml = zipfile.ZipFile(BytesIO(raw_bytes)).read('xl/_rels/workbook.xml.rels').decode()
+    rels = re.findall(r'Id="([^"]+)"[^>]+Target="([^"]+)"', rels_xml)
+    rid_to_target = {r[0]: r[1] for r in rels}
+    for name, rid in sheets:
+        if name == 'DANE':
+            target = rid_to_target.get(rid, '')
+            if not target.startswith('xl/'):
+                target = 'xl/' + target
+            return target
+    raise Exception("Nie znaleziono arkusza DANE")
+
+
+def patch_dane_sheet(xml_bytes, proby, spawacz, projekt):
+    xml = xml_bytes.decode('utf-8')
+    epoch = d(1899, 12, 30)
+    serial = (d.today() - epoch).days
+    proby_str = ', '.join(proby)
+
+    def esc(v):
+        return str(v).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    def inline_cell(ref, val):
+        return f'<c r="{ref}" t="inlineStr"><is><t>{esc(val)}</t></is></c>'
+
+    def date_cell(ref, val):
+        return f'<c r="{ref}" s="1"><v>{val}</v></c>'
+
+    def replace_row(xml_content, row_num, cells_xml):
+        row_pattern = rf'<row([^>]+r="{row_num}"[^>]*)>.*?</row>'
+        m = re.search(row_pattern, xml_content, re.DOTALL)
+        if m:
+            new_row = f'<row{m.group(1)}>{cells_xml}</row>'
+            return xml_content[:m.start()] + new_row + xml_content[m.end():]
+        else:
+            new_row = f'<row r="{row_num}">{cells_xml}</row>'
+            return xml_content.replace('</sheetData>', new_row + '</sheetData>')
+
+    # Wyczyść stare komórki B4-B30
+    for r in range(4, 31):
+        xml = re.sub(rf'<c r="B{r}"[^/]*/>', '', xml)
+        xml = re.sub(rf'<c r="B{r}"[^>]*>.*?</c>', '', xml, flags=re.DOTALL)
+
+    # Wiersze 1-4: A=dane, B=próby[0-3]
+    b1 = inline_cell('B1', proby[0]) if len(proby) > 0 else ''
+    b2 = inline_cell('B2', proby[1]) if len(proby) > 1 else ''
+    b3 = inline_cell('B3', proby[2]) if len(proby) > 2 else ''
+    b4 = inline_cell('B4', proby[3]) if len(proby) > 3 else ''
+
+    xml = replace_row(xml, 1, date_cell('A1', serial) + b1)
+    xml = replace_row(xml, 2, inline_cell('A2', proby_str) + b2)
+    xml = replace_row(xml, 3, inline_cell('A3', spawacz) + b3)
+    xml = replace_row(xml, 4, inline_cell('A4', projekt) + b4)
+
+    # Próby B5+
+    for i in range(4, len(proby)):
+        row_num = i + 1
+        new_cell = inline_cell(f'B{row_num}', proby[i])
+        row_pattern = rf'<row([^>]+r="{row_num}"[^>]*)>.*?</row>'
+        m = re.search(row_pattern, xml, re.DOTALL)
+        if m:
+            xml = xml[:m.start()] + f'<row{m.group(1)}>{new_cell}</row>' + xml[m.end():]
+        else:
+            xml = xml.replace('</sheetData>', f'<row r="{row_num}">{new_cell}</row></sheetData>')
+
+    return xml.encode('utf-8')
+
+
+def build_xlsx(t, proby, spawacz, projekt):
+    raw = TEMPLATES[t]
+    dane_file = get_dane_sheet_path(raw)
+    out = BytesIO()
+    with zipfile.ZipFile(BytesIO(raw), 'r') as zin, zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == dane_file:
+                data = patch_dane_sheet(data, proby, spawacz, projekt)
+            zout.writestr(item, data)
+    out.seek(0)
+    return out
+
+
 @app.route("/api/export", methods=["POST"])
 def export():
-    body    = request.get_json()
+    body = request.get_json()
     t       = body.get("type", "MT").upper()
     proby   = body.get("proby", [])
     spawacz = body.get("spawacz", "")
@@ -113,32 +197,14 @@ def export():
     if t not in TEMPLATES:
         return jsonify({"error": f"Brak szablonu {t}__wzor.xlsx"}), 400
 
-    wb = openpyxl.load_workbook(BytesIO(TEMPLATES[t]))
-    ws = wb["DANE"]
+    try:
+        buf = build_xlsx(t, proby, spawacz, projekt)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    for r in range(1, 31):
-        ws.cell(row=r, column=1).value = None
-        ws.cell(row=r, column=2).value = None
-
-    ws["A1"] = date.today()
-    ws["A1"].number_format = "DD.MM.YYYY"
-    ws["A2"] = proby[0] if proby else ""
-    ws["A3"] = spawacz
-    ws["A4"] = projekt
-
-    for i, p in enumerate(proby):
-        if i >= 30:
-            break
-        ws.cell(row=i + 1, column=2).value = p
-
-    buf = BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-
-    spawacz_safe = (spawacz or "").replace(" ", "_").upper()
-    proby_str    = "_".join(proby)
-    fname        = f"{t}_{proby_str}_{spawacz_safe}.xlsx"
-
+    spawacz_safe = spawacz.replace(" ", "_").upper()
+    proby_str = "_".join(proby)
+    fname = f"{t}_{proby_str}_{spawacz_safe}.xlsx"
     return send_file(
         buf,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
